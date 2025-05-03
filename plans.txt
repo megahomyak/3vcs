@@ -1,0 +1,16 @@
+every layer is a diff
+parent=null => assume parent being an empty layer (like a regular layer, but with no files)
+
+* lvcs init layername - init with fir
+st and current layer being layername
+* lvcs commit layername - rename the current layer to layername, make a new layer with the current name as its child (layername -> *curname*), and switch to that new layer
+* lvcs switch layername - switch to layer layername
+* lvcs rm layername - remove layername; layername.children.{parent=layername.parent; diff=merge(layername.diff, this.diff)}
+* lvcs branch layername - make a new layer with name layername as the child of current layer (*curname* -> layername), and switch to that new layer
+* lvcs push - add all parent-of-any layers from local to remote, commits with same names get updated
+* lvcs pull - add all parent-of-any layers from remote to local, commits with same names get updated
+* lvcs diff layername - prints out the diff between current and specified layer
+* lvcs copy layername - copies the files of layername into current layer
+* lvcs rename layername - renames current layer to layername
+
+I should continue doing this on a piece of paper, representing the layer system as a tree with each node being a version of repository (not the diffs, they're an implementation detail)
