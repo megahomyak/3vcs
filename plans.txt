@@ -1,16 +1,15 @@
-every layer is a diff
-parent=null => assume parent being an empty layer (like a regular layer, but with no files)
+Repository versions are stored in a tree
 
-* lvcs init layername - init with fir
-st and current layer being layername
-* lvcs commit layername - rename the current layer to layername, make a new layer with the current name as its child (layername -> *curname*), and switch to that new layer
-* lvcs switch layername - switch to layer layername
-* lvcs rm layername - remove layername; layername.children.{parent=layername.parent; diff=merge(layername.diff, this.diff)}
-* lvcs branch layername - make a new layer with name layername as the child of current layer (*curname* -> layername), and switch to that new layer
-* lvcs push - add all parent-of-any layers from local to remote, commits with same names get updated
-* lvcs pull - add all parent-of-any layers from remote to local, commits with same names get updated
-* lvcs diff layername - prints out the diff between current and specified layer
-* lvcs copy layername - copies the files of layername into current layer
-* lvcs rename layername - renames current layer to layername
+Each element in the tree can have its children, with names to identify them. That is, any versioned repo is like this:
 
-I should continue doing this on a piece of paper, representing the layer system as a tree with each node being a version of repository (not the diffs, they're an implementation detail)
+let root = Layer {
+    contents: ...,
+    children: {
+        "somename": Layer { ... },
+        "somename2": Layer { ... },
+    },
+};
+
+And any revisioning work being done is really kind of like messing around with regular files on the filesystem, just with extreme nesting for sequences (like, a chain of sequential `git commit`s will produce an implicit tree of commits, but here it's just gonna be very explicit, and the actual unique identifier of the "commit" (layer) will be the entire path from the very first commit)
+
+So, essentially, this thing will be a filesystem for your filesystem, just without directories (with "files" being able to contain children, it's like a separate container - one is reserved for layer data, one is reserved for all children layers, as shown in a fake code excerpt above)
