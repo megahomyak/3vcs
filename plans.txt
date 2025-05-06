@@ -13,3 +13,29 @@ let root = Layer {
 And any revisioning work being done is really kind of like messing around with regular files on the filesystem, just with extreme nesting for sequences (like, a chain of sequential `git commit`s will produce an implicit tree of commits, but here it's just gonna be very explicit, and the actual unique identifier of the "commit" (layer) will be the entire path from the very first commit)
 
 So, essentially, this thing will be a filesystem for your filesystem, just without directories (with "files" being able to contain children, it's like a separate container - one is reserved for layer data, one is reserved for all children layers, as shown in a fake code excerpt above)
+
+{
+() -> X
+() -> somename
+} => only "pivot" will be available, i.e. you'll have to know preemptively what you're gonna do. and that's unfortunate
+
+if implemented with "save":
+{
+name -> X
+name -> somename
+} => "somename" can just be a branch name. "pivot blah" would create a new layer called "blah" with the parent being the current layer (cur -> blah), and "save blah" would do the pivot and then swap the names (blah -> cur). i can theoretically just make the "save" unavailable for the very first commit, but, like, ugh. that's unfortunate. the user will be forced to do the swapping later. it would be much nicer to just have every layer have a name, which will make an empty path impossible. or maybe it will be possible, it just won't be technically used for anything except for storing the various initial layers. and if so, it would be nice to have not the layers themselves store the files, but only make the connections store them, but that will drag me dangerously close to "git"; however, since there's only one incoming line to each node (because every node is part of a tree), i can still allow the user to "edit the layer" and then, on pushing, i can still just ignore every layer that doesn't have children
+
+so, given all of the above, technically the representation will now look like this:
+
+let root = Layer {
+    children: {
+        "somename": Connection {
+            contents: ...,
+            layer: Layer { ... }
+        },
+        "somename2": Connection {
+            contents: ...,
+            layer: Layer { ... }
+        },
+    }
+};
