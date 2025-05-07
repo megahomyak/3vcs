@@ -52,4 +52,11 @@ however, if i'm coming down to the concepts of files and directories, one intere
 * "3 rm layerpath" - removing a layer with path layerpath
 * "3 mv layerpath" - move current layer to path layerpath
 
+Better commands?:
+* 3 mv layerpath - move current layer to relative or absolute path layerpath
+* 3 goto layerpath - switch to the specified layer
+* 3 init - initialize the system, make everything already present to be contents of the first layer
+* 3 fork layername - create a child with name childname in the current layer and switch to it
+* 3 rm layername - remove the layer at the specified path and all its children recursively (doesn't work if the user is on one of the layers that are about to be removed)
+
 now, onto pulling and pushing...
