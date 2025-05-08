@@ -60,3 +60,9 @@ Better commands?:
 * 3 rm layername - remove the layer at the specified path and all its children recursively (doesn't work if the user is on one of the layers that are about to be removed)
 
 now, onto pulling and pushing...
+
+Upon adding a new remote to a repo, all of the locally present layers get into a "push todo" file
+
+When pushing is executed, all of the changes get applied to the remote one by one and are thus stripped from the todolist (it's a FIFO queue). If a change is impossible to apply, it gets back into the queue and the error is reported to the local user, the queue processing is stopped
+
+For pulling, I guess the remote should also have such a list?? But if it's a public repo, people can clone it a LOT of times, and that will be really unfortunate for the repo holder, tracking so many clones will just block up the space
