@@ -46,3 +46,14 @@ User 2: edit C (C/contents = ... <- goes bad because of "del C" from User 1)
 v tree: .3vcs/{current_layer, layers/{layername}/{parent (file doesn't exist if parent=null), children/{childname (empty file, only the file name matters)}, contents/diffs_here}}
 
 vv tree: .3vcs/layers/.3vcs/{same stuff}
+
+============
+
+Since a "currently chosen layer" and "caches"(which are layers that store the entire tree instead of a diff from their parent, to enhasten commit switching so that we won't go through the entire tree diffing from the very root or the current "currently chosen layer"'s files present outside of ".3vcs") are just implementation details that "mud down" the clean principles behind the system, I think there should be a separation between the "clean state" and the "dirty state". That is, something like
+
+.3vcs/clean/...
+.3vcs/dirty/...
+
+and the vv will be in ".3vcs/clean/.3vcs". Nice.
+
+But the names are total fucking crap. Although I'm not sure I can come up with something better
