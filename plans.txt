@@ -40,3 +40,9 @@ BUT!!!!: there's still this case:
 Remote: A-B-C
 User 1: del B (A/children -= B; del B; del C <- THIS IS WHAT SAVES IT. I should do all deletions recursively, that's how we can find out shit gone bad when merging changes from some other person)
 User 2: edit C (C/contents = ... <- goes bad because of "del C" from User 1)
+
+============
+
+v tree: .3vcs/{current_layer, layers/{layername}/{parent (file doesn't exist if parent=null), children/{childname (empty file, only the file name matters)}, contents/diffs_here}}
+
+vv tree: .3vcs/.3vcs/{same stuff}
