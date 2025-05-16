@@ -57,3 +57,8 @@ Since a "currently chosen layer" and "caches"(which are layers that store the en
 and the vv will be in ".3vcs/clean/.3vcs". Nice.
 
 But the names are total fucking crap. Although I'm not sure I can come up with something better
+
+EVEN BETTER FORMULATIONS:
+
+"clean" is the minimum amount of information required to build a version tree. If any information is retracted from "clean", it will be impossible to reconstruct the entire version tree using only "clean"
+"dirty" is about helping the "clean" be practical
