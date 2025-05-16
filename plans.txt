@@ -62,3 +62,11 @@ EVEN BETTER FORMULATIONS:
 
 "clean" is the minimum amount of information required to build a version tree. If any information is retracted from "clean", it will be impossible to reconstruct the entire version tree using only "clean"
 "dirty" is about helping the "clean" be practical
+
+For now, I guess this is good: "clean"->"source", "dirty"->"helpers". So the structure of a 3vcs repo will be this: {
+.3vcs/source/layers/*actual layer data*
+.3vcs/helpers/*various optimization and convenience thingys*
+*repo files*
+}
+
+Looks good to me so far
