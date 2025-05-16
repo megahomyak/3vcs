@@ -1,68 +1,42 @@
-Repository versions are stored in a tree
+Simple tree of diffs
+One tree on top of that for remote/local difference handling
 
-Each element in the tree can have its children, with names to identify them. That is, any versioned repo is like this:
+If I can make a three-way merge {(base, change1, change2) -> change3 with possibility of merge conflict}, I can likely resolve all the local-remote sync bullshit through that:
 
-let root = Layer {
-    contents: ...,
-    children: {
-        "somename": Layer { ... },
-        "somename2": Layer { ... },
-    },
-};
+"B" = "Base"/"Both" (i.e. present on both local and remote)
+"R" = "Remote"
+"L" = "Local"
 
-And any revisioning work being done is really kind of like messing around with regular files on the filesystem, just with extreme nesting for sequences (like, a chain of sequential `git commit`s will produce an implicit tree of commits, but here it's just gonna be very explicit, and the actual unique identifier of the "commit" (layer) will be the entire path from the very first commit)
+Remote: B-B-R-R-R => B-R
+Local: B-B-L-L => B-L
 
-So, essentially, this thing will be a filesystem for your filesystem, just without directories (with "files" being able to contain children, it's like a separate container - one is reserved for layer data, one is reserved for all children layers, as shown in a fake code excerpt above)
+Needed transformation of both: B-* => B-R-L
 
-{
-() -> X
-() -> somename
-} => only "pivot" will be available, i.e. you'll have to know preemptively what you're gonna do. and that's unfortunate
+"B" serves as a base, "R" and "L" are the two sets of changes. Since these are changes of changes, they will store stuff like adding or editing layers. I guess merging a change of a change of the same layer wouldn't be that bad? Also, I need to ensure nothing breaks to shit; since I'm going through the internals here, it's really easy to, say, make some layer point to a layer that doesn't exist anymore, if on one side a layer was created, and on the other one was deleted. I guess an integrity check might be useful here, but it's quite computationally expensive; if this were just a "plain dumb tree", everything would've been handled by the filesystem, although I guess the intricacies might still be fucked up. Maybe I just need a separate representation for the changes queue, have some more internal validation, that kind of stuff? This is tough.
 
-if implemented with "save":
-{
-name -> X
-name -> somename
-} => "somename" can just be a branch name. "pivot blah" would create a new layer called "blah" with the parent being the current layer (cur -> blah), and "save blah" would do the pivot and then swap the names (blah -> cur). i can theoretically just make the "save" unavailable for the very first commit, but, like, ugh. that's unfortunate. the user will be forced to do the swapping later. it would be much nicer to just have every layer have a name, which will make an empty path impossible. or maybe it will be possible, it just won't be technically used for anything except for storing the various initial layers. and if so, it would be nice to have not the layers themselves store the files, but only make the connections store them, but that will drag me dangerously close to "git"; however, since there's only one incoming line to each node (because every node is part of a tree), i can still allow the user to "edit the layer" and then, on pushing, i can still just ignore every layer that doesn't have children
+B-* => B-R-L: pull the remote changes, find the common base, try to merge the two. Although here would I should use is probably a rebase and not a merge, if I want to do B-R-L and not B-Merge. Although I can leave B-R-L on remote and locally I can have something like B-Merge, that is if I restrict the push operation if there's nothing to pull. So, like, if the merge cannot be done, then we just error out or maybe make a merge conflict and let the user resolve it, but anyway what we will be left with will either be B-Merge or B-L <- the second case is what we started with so it's covered, and the first case will have an L-only two-way diff with the remote
 
-so, given all of the above, technically the representation will now look like this:
+Although I should probably think of a case when:
 
-let root = Layer {
-    children: {
-        "somename": Connection {
-            contents: ...,
-            layer: Layer { ... }
-        },
-        "somename2": Connection {
-            contents: ...,
-            layer: Layer { ... }
-        },
-    }
-};
+Remote (layer: "remote v1"): A-B (serves as common base)
+User 1 (layer: "local v2"): A (deleted B. What happens inside: A/children -= B; del B/contents; del B/children; del B/parent)
+User 2 (layer: "local v2"): A-B-C (added C as child of B. What happens inside: B/children += C; C/parent += B; C/contents = ...)
 
-it means that, technically, it's not the nodes that we're choosing right now, it's the *connections* that we have selected. we always add and operate on connections, not the layers themselves. it would be the same thing as if the root node was an invalid path - that is, the root node won't exist at all and will not be "just a directory". however, if we imagine all the nodes being directories and all the links between them being files, it becomes simpler, so i guess i'll stick to this idea with nodes being directories and node connections storing information. and so, if we'll need to get to a connection, we'll have to specify the path to it. and if we start on a certain connection... ugh. this becomes uncool when i realize that "[]" will never be a valid path to stand on, only something like "['somename']" would, and that would be the minimal we can get. unfortunate. if i want to get rid of that, i will have to go more into the direction of git and decouple the current changes from any particular commit and make them their own, separate, annoying, complicating entity
+Two cases remain:
+* User 1 pushes first
+* User 2 pushes first
 
-however, if i'm coming down to the concepts of files and directories, one interesting use case is this: what if the system will get used like folders with copies of the program? like, the programmer wants to do a certain new change and is thus copying the entire program file tree into a different location, does changes there and then merges them into main if changes were successful. this is very basic and is probably even a new niche that "git" didn't take. so, i can just make the pivoting the only operation, and then also introduce renaming. so, essentially
+"User 1 pushes first":
+Remote (layer: "remote v2"): A
+User 2 (layer: "local v2"): A-B-C
+Common base (layer: "remote v1"): A-B
+If User 2 pushes now, he'll have to pull first; on a pull, the remote history (only the "remote v2" in this case) is pulled to the local meta-tree as a separate branch (that is, the local tree will now look like "remote v1"-{"remote v2", "local v2"}), then a three-way merge is done to produce a "remote v3" on the client; BUT!: the merge takes (base="remote v1", change1="remote v2", change2="local v2"), and there's a conflict between just editing B/children and deleting B/children
 
-* every layer is like a directory containing two other directories: "children" and "contents"
-* "3 pivot childname" - creating a layer child with name childname in the current layer and switching to it
-* "3 rename newname" - rename the current layer to newname
-* "3 init" - initializing the system with the first layer having no "children"
-* "3 switch layerpath" - switching to layer with path layerpath
-* "3 rm layerpath" - removing a layer with path layerpath
-* "3 mv layerpath" - move current layer to path layerpath
+And "User 2 pushes first" is equivalent because now it's the same thing, just the changes are swapped (in "User 2 pushes first", "remote v2" and "local v2" will be swapped from "User 1 pushes first", everything else will be equivalent)
 
-Better commands?:
-* 3 mv layerpath - move current layer to relative or absolute path layerpath
-* 3 goto layerpath - switch to the specified layer
-* 3 init - initialize the system, make everything already present to be contents of the first layer
-* 3 fork layername - create a child with name childname in the current layer and switch to it
-* 3 rm layername - remove the layer at the specified path and all its children recursively (doesn't work if the user is on one of the layers that are about to be removed)
+Proposal: call the meta-tree (the tree of the tree) a "vee-vee tree" ("vv tree", or just "vv" - "version version tree", and then the regular one will just be called a "v" tree)
 
-now, onto pulling and pushing...
-
-Upon adding a new remote to a repo, all of the locally present layers get into a "push todo" file
-
-When pushing is executed, all of the changes get applied to the remote one by one and are thus stripped from the todolist (it's a FIFO queue). If a change is impossible to apply, it gets back into the queue and the error is reported to the local user, the queue processing is stopped
-
-For pulling, I guess the remote should also have such a list?? But if it's a public repo, people can clone it a LOT of times, and that will be really unfortunate for the repo holder, tracking so many clones will just block up the space
+BUT!!!!: there's still this case:
+Remote: A-B-C
+User 1: del B (A/children -= B; del B; del C <- THIS IS WHAT SAVES IT. I should do all deletions recursively, that's how we can find out shit gone bad when merging changes from some other person)
+User 2: edit C (C/contents = ... <- goes bad because of "del C" from User 1)
